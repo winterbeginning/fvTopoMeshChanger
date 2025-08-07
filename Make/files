@@ -1,0 +1,4 @@
+melter/melter_fvMeshTopoChanger.C
+generator/generator_fvMeshTopoChanger.C
+
+LIB = $(FOAM_USER_LIBBIN)/libmytopochanger
