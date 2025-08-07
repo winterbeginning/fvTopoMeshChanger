@@ -1,4 +1,4 @@
-melter/melter_fvMeshTopoChanger.C
-generator/generator_fvMeshTopoChanger.C
+cellRemoval/cellRemoval_fvMeshTopoChanger.C
+cellAddition/cellAddition_fvMeshTopoChanger.C
 
-LIB = $(FOAM_USER_LIBBIN)/libmytopochanger
+LIB = $(FOAM_USER_LIBBIN)/libcellRemovalAddition

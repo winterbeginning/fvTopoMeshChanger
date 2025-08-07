@@ -1,3 +1,0 @@
-SOURCE += generator_fvMeshTopoChanger.C
-
-LIB = $(FOAM_USER_LIBBIN)/libgenerator

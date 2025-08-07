@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+topoChanger
+{
+    type    cellAddition;
+
+    libs ("libcellRemovalAddition.so");
+
+    sourceRegion         solid;
+    
+    couplingPatch       gas_to_solid;
+
+    debugLevel           4; // 调试级别
+    
+    // 边界名称映射：固相边界名 -> 气相边界名
+    boundaryMapping
+    {
+        solid_left      inlet;
+        solid_right     outlet;
+        wall_bottom     wall_gas;
+    }
+}
+
+// ************************************************************************* //
