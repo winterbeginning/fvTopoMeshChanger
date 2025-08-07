@@ -51,7 +51,7 @@ void Foam::fvMeshTopoChangers::cellRemoval::RemovalDataOutput::applyCouplingPoin
 {
     if (debugLevel_ >= 2)
     {
-        Info<< "应用耦合点映射，映射数量: " << couplingPointMapping.size() << endl;
+        Pout<< "应用耦合点映射，映射数量: " << couplingPointMapping.size() << endl;
     }
     
     label nReplacedPoints = 0;
@@ -103,15 +103,27 @@ void Foam::fvMeshTopoChangers::cellRemoval::RemovalDataOutput::applyCouplingPoin
     
     if (debugLevel_ >= 2)
     {
-        Info<< "完成点映射，替换了 " << nReplacedPoints << " 个点" << endl;
+        Pout<< "完成点映射，替换了 " << nReplacedPoints << " 个点" << endl;
     }
 }
 
 void Foam::fvMeshTopoChangers::cellRemoval::RemovalDataOutput::writeToFile(const polyMesh& mesh) const
 {
     const Time& runTime = mesh.time();
-    fileName outputDir = runTime.rootPath()/runTime.globalCaseName()/"cellRemovalData";
-    mkDir(outputDir);
+    fileName outputDir;
+    
+    if (Pstream::parRun())
+    {
+        // 并行运行：每个处理器在自己的文件夹中写入数据
+        outputDir = runTime.rootPath()/runTime.globalCaseName()/"cellRemovalData"/("processor" + Foam::name(Pstream::myProcNo()));
+        mkDir(outputDir);
+    }
+    else
+    {
+        // 串行运行：按原方式写入
+        outputDir = runTime.rootPath()/runTime.globalCaseName()/"cellRemovalData";
+        mkDir(outputDir);
+    }
     
     fileName dataFile = outputDir/("removalData_" + runTime.name() + ".dat");
     
@@ -200,7 +212,7 @@ void Foam::fvMeshTopoChangers::cellRemoval::RemovalDataOutput::writeToFile(const
     
     if (debugLevel_ >= 1)
     {
-        Info<< "单元移除数据已写入: " << dataFile << endl;
+        Pout<< "单元移除数据已写入: " << dataFile << endl;
     }
 }
 
@@ -224,7 +236,7 @@ void Foam::fvMeshTopoChangers::cellRemoval::buildCouplingPointMapping(RemovalDat
     {
         if (debugLevel_ >= 1)
         {
-            Info<< "耦合边界 " << couplingPatch.name() 
+            Pout<< "耦合边界 " << couplingPatch.name() 
                 << " 不是映射边界，跳过点映射建立" << endl;
         }
         return;
@@ -240,7 +252,7 @@ void Foam::fvMeshTopoChangers::cellRemoval::buildCouplingPointMapping(RemovalDat
         
         if (debugLevel_ >= 2)
         {
-            Info<< "建立耦合点映射: " << couplingPatch.name() 
+            Pout<< "建立耦合点映射: " << couplingPatch.name() 
                 << " <-> " << polyPatchNbr.name() << endl;
         }
         
@@ -350,10 +362,10 @@ void Foam::fvMeshTopoChangers::cellRemoval::buildCouplingPointMapping(RemovalDat
         
         if (debugLevel_ >= 2)
         {
-            Info<< "成功建立 " << nValidMappedPoints << " 个耦合点映射" << endl;
+            Pout<< "成功建立 " << nValidMappedPoints << " 个耦合点映射" << endl;
             if (nValidMappedPoints > 0)
             {
-                Info<< "平均距离: " << totalDistance/nValidMappedPoints 
+                Pout<< "平均距离: " << totalDistance/nValidMappedPoints 
                     << ", 最大距离: " << maxDistance << endl;
             }
         }
@@ -429,7 +441,7 @@ Foam::labelList Foam::fvMeshTopoChangers::cellRemoval::selectCellsToRemove() con
     
     if (debugLevel_ >= 1)
     {
-        Info<< "找到 " << cellsToRemove.size() << " 个单元需要移除 (T > " 
+        Pout<< "找到 " << cellsToRemove.size() << " 个单元需要移除 (T > " 
             << temperatureThreshold_ << " K)" << endl;
     }
 
@@ -656,14 +668,10 @@ Foam::fvMeshTopoChangers::cellRemoval::changeMesh(const labelList& cellsToRemove
     // 执行网格变更
     autoPtr<polyTopoChangeMap> map = meshMod.changeMesh(mesh(), false);
     
-        // 输出统计信息
-    const label nRemovedCells = returnReduce(cellsToRemove.size(), sumOp<label>());
-    const label nTotalCells = returnReduce(mesh().nCells(), sumOp<label>());
-    
     if (debugLevel_ >= 1)
     {
-        Info<< "移除了 " << nRemovedCells << " 个高温单元，"
-            << "新网格共有 " << nTotalCells << " 个单元" << endl;
+        Pout<< "移除了 " << cellsToRemove.size() << " 个高温单元，"
+        << "新网格共有 " << mesh().nCells() << " 个单元" << endl;
     }
 
     // 更新网格数据
@@ -676,32 +684,32 @@ void Foam::fvMeshTopoChangers::cellRemoval::debugOutput(const RemovalDataOutput&
 {
     if (debugLevel_ < 1) return;
     
-    Info<< nl << "=== 单元移除调试信息 ===" << nl;
-    Info<< "时间: " << mesh().time().name() << nl;
-    Info<< "移除单元数: " << outputData.removedCells.size() << nl;
-    Info<< "移除点数: " << outputData.removedCellPoints.size() << nl;
-    Info<< "耦合点映射数: " << outputData.couplingPointMapping.size() << nl;
-    Info<< "普通边界面数: " << outputData.ordinaryBoundaryFaces.size() << nl;
-    Info<< "新耦合边界面数: " << outputData.newCouplingBoundaryFaces.size() << nl;
-    Info<< "内部面数: " << outputData.internalFaces.size() << nl;
+    Pout<< nl << "=== 单元移除调试信息 ===" << nl;
+    Pout<< "时间: " << mesh().time().name() << nl;
+    Pout<< "移除单元数: " << outputData.removedCells.size() << nl;
+    Pout<< "移除点数: " << outputData.removedCellPoints.size() << nl;
+    Pout<< "耦合点映射数: " << outputData.couplingPointMapping.size() << nl;
+    Pout<< "普通边界面数: " << outputData.ordinaryBoundaryFaces.size() << nl;
+    Pout<< "新耦合边界面数: " << outputData.newCouplingBoundaryFaces.size() << nl;
+    Pout<< "内部面数: " << outputData.internalFaces.size() << nl;
     
     if (debugLevel_ >= 2)
     {
-        Info<< nl << "网格统计:" << nl;
-        Info<< "  总点数: " << mesh().nPoints() << nl;
-        Info<< "  总单元数: " << mesh().nCells() << nl;
-        Info<< "  总面数: " << mesh().nFaces() << nl;
-        Info<< "  内部面数: " << mesh().nInternalFaces() << nl;
+        Pout<< nl << "网格统计:" << nl;
+        Pout<< "  总点数: " << mesh().nPoints() << nl;
+        Pout<< "  总单元数: " << mesh().nCells() << nl;
+        Pout<< "  总面数: " << mesh().nFaces() << nl;
+        Pout<< "  内部面数: " << mesh().nInternalFaces() << nl;
         
         if (couplingPatchID_ >= 0)
         {
             const polyPatch& couplingPatch = mesh().boundaryMesh()[couplingPatchID_];
-            Info<< "  耦合边界: " << couplingPatch.name() 
+            Pout<< "  耦合边界: " << couplingPatch.name() 
                 << " (面数=" << couplingPatch.size() << ")" << nl;
         }
     }
     
-    Info<< "=========================" << nl << endl;
+    Pout<< "=========================" << nl << endl;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -723,7 +731,7 @@ Foam::fvMeshTopoChangers::cellRemoval::cellRemoval(fvMesh& mesh, const dictionar
 
     if (debugLevel_ >= 1)
     {
-        Info<< "创建单元移除网格拓扑变化器:" << nl
+        Pout<< "创建单元移除网格拓扑变化器:" << nl
             << "  温度阈值: " << temperatureThreshold_ << nl
             << "  变更间隔: " << changeInterval_ << nl
             << "  温度场: " << temperatureFieldName_ << nl
@@ -758,9 +766,10 @@ bool Foam::fvMeshTopoChangers::cellRemoval::update()
     {
         removedCells_ = selectCellsToRemove();
         
-        const label nCellsToRemove = returnReduce(removedCells_.size(), sumOp<label>());
-        
-        if (nCellsToRemove > 0)
+        const label nLocalCellsToRemove = removedCells_.size();
+        const label nGlobalCellsToRemove = returnReduce(nLocalCellsToRemove, sumOp<label>());
+
+        if (nGlobalCellsToRemove > 0)
         {
             autoPtr<polyTopoChangeMap> map = changeMesh(removedCells_);
             changedSinceWrite_ = true;
