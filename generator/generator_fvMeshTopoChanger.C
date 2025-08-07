@@ -552,49 +552,6 @@ void Foam::fvMeshTopoChangers::generator::readBoundaryMapping()
     }
 }
 
-Foam::label Foam::fvMeshTopoChangers::generator::selectBestMasterCell(
-    const point& newCellCentre
-) const
-{
-    const vectorField& meshCellCentres = mesh().cellCentres();
-    
-    if (debugLevel_ >= 3)
-    {
-        Info<< "为新单元选择母单元: 新单元中心=" << newCellCentre << endl;
-    }
-    
-    // 策略1：找到距离最近的现有单元
-    label bestMasterCell = -1;
-    scalar minDistance = GREAT;
-    
-    // 遍历所有现有单元，找到最近的
-    forAll(meshCellCentres, cellI)
-    {
-        // 排除新创建的单元（避免循环引用）
-        if (originalToNewCellMap_.found(cellI))
-        {
-            continue;  // 这是新创建的单元，跳过
-        }
-        
-        scalar distance = mag(newCellCentre - meshCellCentres[cellI]);
-        
-        if (distance < minDistance)
-        {
-            minDistance = distance;
-            bestMasterCell = cellI;
-        }
-    }
-    
-    if (debugLevel_ >= 3)
-    {
-        Info<< "  选择的母单元: " << bestMasterCell 
-            << " 距离: " << minDistance 
-            << " 母单元中心: " << (bestMasterCell >= 0 ? meshCellCentres[bestMasterCell] : point::zero) << endl;
-    }
-    
-    return bestMasterCell;
-}
-
 Foam::word Foam::fvMeshTopoChangers::generator::getGasBoundaryName(const word& solidBoundaryName) const
 {
     if (boundaryNameMapping_.found(solidBoundaryName))
@@ -781,12 +738,8 @@ void Foam::fvMeshTopoChangers::generator::createCells(polyTopoChange& meshMod)
     forAll(meltingData_.cells, i)
     {
         ReceivedCellInfo& cellInfo = meltingData_.cells[i];
-        
-        // 关键改进：基于单元中心坐标选择最佳母单元
-        label masterCellId = selectBestMasterCell(cellInfo.centroid);
 
-        // 添加单元，接受add函数返回的实际ID
-        label newCellId = meshMod.addCell(masterCellId);
+        label newCellId = meshMod.addCell(-1);
         
         // 建立映射关系：原始ID -> 新ID
         originalToNewCellMap_.insert(cellInfo.originalId, newCellId);
@@ -1081,7 +1034,7 @@ void Foam::fvMeshTopoChangers::generator::convertTemporaryFacesToCouplingFaces(p
     }
 }
 
-void Foam::fvMeshTopoChangers::generator::createNewTopBoundaryFacesAsTemporary(polyTopoChange& meshMod)
+void Foam::fvMeshTopoChangers::generator::createNewCoupleBoundaryFacesAsTemporary(polyTopoChange& meshMod)
 {
     //const pointField& meshPoints = mesh().points();
     
@@ -1596,7 +1549,7 @@ Foam::fvMeshTopoChangers::generator::generateMesh()
     createCells(meshMod);
     
     // 3. 创建新的top边界面，但设为临时边界面（ID=0的patch）
-    createNewTopBoundaryFacesAsTemporary(meshMod);
+    createNewCoupleBoundaryFacesAsTemporary(meshMod);
  
     // 4. 修改现有耦合边界面为内部面
     modifyExistingCouplingFaces(meshMod);

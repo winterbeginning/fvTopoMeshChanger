@@ -179,10 +179,7 @@ class generator
         
         //- 创建普通边界面
         void createOrdinaryBoundaryFaces(polyTopoChange& meshMod);
-        
-        //- 创建新的top边界面（耦合面）
-        //void createNewTopBoundaryFaces(polyTopoChange& meshMod);
-        
+
         //- 创建内部面
         void createInternalFaces(polyTopoChange& meshMod);
         
@@ -196,45 +193,11 @@ class generator
 
 
         //- 创建新的top边界面作为临时边界面
-        void createNewTopBoundaryFacesAsTemporary(polyTopoChange& meshMod);
+        void createNewCoupleBoundaryFacesAsTemporary(polyTopoChange& meshMod);
         
         //- 将临时边界面转换为耦合边界面
         void convertTemporaryFacesToCouplingFaces(polyTopoChange& meshMod);
-        
-        void customFieldMapping(const polyTopoChangeMap& map);
-        
-        //- 映射标量场
-        void mapScalarFields(const labelList& newCells);
-        
-        //- 映射矢量场
-        void mapVectorFields(const labelList& newCells);
-        
-        //- 从相邻单元插值标量
-        scalar interpolateScalarFromNeighbors
-        (
-            const volScalarField& field,
-            const label newCelli
-        ) const;
-        
-        //- 从相邻单元插值矢量
-        vector interpolateVectorFromNeighbors
-        (
-            const volVectorField& field,
-            const label newCelli
-        ) const;
-        
-        //- 获取场的默认值
-        scalar getDefaultValue(const word& fieldName) const;
-        
-        //- 检查值是否合理
-        bool isReasonableValue(const word& fieldName, const scalar value) const;
-
-        //- 验证映射结果
-        void validateMappingResults(const labelList& newCells);
-
-            //- 基于单元中心坐标选择最佳母单元
-        label selectBestMasterCell(const point& newCellCentre) const;
-
+     
         // 调试输出函数
         void debugOutput(label level) const;
         

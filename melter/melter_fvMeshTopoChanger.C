@@ -47,336 +47,6 @@ namespace fvMeshTopoChangers
 }
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-// void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutput& outputData) const
-// {
-//     const polyBoundaryMesh& pbm = mesh().boundaryMesh();
-    
-//     if (couplingPatchID_ >= 0 && couplingPatchID_ < pbm.size())
-//     {
-//         const polyPatch& solidToGasPatch = pbm[couplingPatchID_];
-        
-//         // 检查是否为映射边界
-//         const fvPatch& fvp = mesh().boundary()[couplingPatchID_];
-        
-//         if (isA<mappedFvPatchBaseBase>(fvp))
-//         {
-//             const mappedFvPatchBaseBase& mapper = 
-//                 refCast<const mappedFvPatchBaseBase>(fvp);
-            
-//             try
-//             {
-//                 Info<< nl << "=== 耦合面点映射分析 ===" << nl;
-//                 Info<< "固相patch: " << solidToGasPatch.name() 
-//                     << " (ID: " << couplingPatchID_ << ")" << nl;
-
-//                 // 获取邻域patch
-//                 const fvPatch& patchNbr = mapper.nbrFvPatch();
-//                 const polyPatch& polyPatchNbr = patchNbr.patch();
-                
-//                 Info<< "气相patch: " << polyPatchNbr.name() << nl;
-//                 Info<< "固相面数: " << solidToGasPatch.size() << nl;
-//                 Info<< "气相面数: " << polyPatchNbr.size() << nl;
-                
-//                 // 检查面数量是否匹配
-//                 if (solidToGasPatch.size() != polyPatchNbr.size())
-//                 {
-//                     WarningInFunction
-//                         << "固相和气相patch的面数量不匹配: "
-//                         << "固相面数 = " << solidToGasPatch.size()
-//                         << ", 气相面数 = " << polyPatchNbr.size() << nl
-//                         << "跳过点映射建立" << endl;
-//                     return;
-//                 }
-                
-//                 if (solidToGasPatch.size() == 0)
-//                 {
-//                     Info<< "patch为空，跳过点映射建立" << endl;
-//                     return;
-//                 }
-                
-//                 // 获取网格点坐标
-//                 const pointField& solidMeshPoints = mesh().points();
-//                 const pointField& gasMeshPoints = patchNbr.boundaryMesh().mesh().points();
-                
-//                 if (solidMeshPoints.size() == 0 || gasMeshPoints.size() == 0)
-//                 {
-//                     WarningInFunction
-//                         << "网格点坐标数组为空，跳过点映射建立" << endl;
-//                     return;
-//                 }
-                
-//                 // 统计变量
-//                 label nMappedPoints = 0;
-//                 label nValidMappedPoints = 0;
-//                 scalar totalDistance = 0.0;
-//                 scalar maxDistance = 0.0;
-//                 label nLargeDistancePoints = 0;
-                
-//                 const scalar tolerableDistance = 1e-3; // 放宽容差到1毫米
-                
-//                 Info<< "开始基于面对应关系的点映射..." << nl;
-                
-//                 // 限制处理的面数量，避免处理过多面时出错
-//                 const label maxFacesToProcess = solidToGasPatch.size();
-//                 Info<< "将处理前" << maxFacesToProcess << "个面进行测试..." << nl;
-                
-//                 // 修正：直接使用face中的全局点ID，不需要通过meshPoints转换
-//                 for (label facei = 0; facei < maxFacesToProcess; facei++)
-//                 {
-//                     // 安全检查：确保面索引在有效范围内
-//                     if (facei >= solidToGasPatch.size() || facei >= polyPatchNbr.size())
-//                     {
-//                         WarningInFunction
-//                             << "面索引" << facei << "超出范围，跳过" << endl;
-//                         continue;
-//                     }
-                    
-//                     const face& solidFace = solidToGasPatch[facei];
-//                     const face& gasFace = polyPatchNbr[facei];
-                    
-//                     // 检查面点数是否匹配
-//                     if (solidFace.size() != gasFace.size())
-//                     {
-//                         WarningInFunction
-//                             << "面" << facei << "的点数不匹配: "
-//                             << "固相=" << solidFace.size() 
-//                             << ", 气相=" << gasFace.size() << endl;
-//                         continue;
-//                     }
-                    
-//                     if (solidFace.size() == 0 || gasFace.size() == 0)
-//                     {
-//                         WarningInFunction
-//                             << "面" << facei << "为空面，跳过" << endl;
-//                         continue;
-//                     }
-                    
-//                     // 修正：直接使用face中的全局点ID
-//                     pointField solidFacePoints(solidFace.size());
-//                     labelList solidFaceGlobalIds(solidFace.size());
-                    
-//                     bool solidFaceValid = true;
-//                     forAll(solidFace, pointi)
-//                     {
-//                         // 直接使用face中的ID作为全局点ID
-//                         label solidGlobalId = solidFace[pointi];
-                        
-//                         // 检查全局ID是否在有效范围内
-//                         if (solidGlobalId < 0 || solidGlobalId >= solidMeshPoints.size())
-//                         {
-//                             WarningInFunction
-//                                 << "面" << facei << "固相全局点ID" << solidGlobalId 
-//                                 << "超出范围[0," << solidMeshPoints.size()-1 << "]" << endl;
-//                             solidFaceValid = false;
-//                             break;
-//                         }
-                        
-//                         solidFacePoints[pointi] = solidMeshPoints[solidGlobalId];
-//                         solidFaceGlobalIds[pointi] = solidGlobalId;
-//                     }
-                    
-//                     if (!solidFaceValid)
-//                     {
-//                         WarningInFunction
-//                             << "面" << facei << "固相点索引无效，跳过" << endl;
-//                         continue;
-//                     }
-                    
-//                     // 修正：直接使用face中的全局点ID
-//                     pointField gasFacePoints(gasFace.size());
-//                     labelList gasFaceGlobalIds(gasFace.size());
-                    
-//                     bool gasFaceValid = true;
-//                     forAll(gasFace, pointi)
-//                     {
-//                         // 直接使用face中的ID作为全局点ID
-//                         label gasGlobalId = gasFace[pointi];
-                        
-//                         // 检查全局ID是否在有效范围内
-//                         if (gasGlobalId < 0 || gasGlobalId >= gasMeshPoints.size())
-//                         {
-//                             WarningInFunction
-//                                 << "面" << facei << "气相全局点ID" << gasGlobalId 
-//                                 << "超出范围[0," << gasMeshPoints.size()-1 << "]" << endl;
-//                             gasFaceValid = false;
-//                             break;
-//                         }
-                        
-//                         gasFacePoints[pointi] = gasMeshPoints[gasGlobalId];
-//                         gasFaceGlobalIds[pointi] = gasGlobalId;
-//                     }
-                    
-//                     if (!gasFaceValid)
-//                     {
-//                         WarningInFunction
-//                             << "面" << facei << "气相点索引无效，跳过" << endl;
-//                         continue;
-//                     }
-                    
-//                     // 对固相面上的每个点，在气相面上找到最近的点
-//                     forAll(solidFacePoints, solidPointi)
-//                     {
-//                         const point& solidPt = solidFacePoints[solidPointi];
-//                         const label solidGlobalId = solidFaceGlobalIds[solidPointi];
-                        
-//                         // 在气相面的点中搜索最近的点
-//                         label bestGasPointi = -1;
-//                         scalar minDistance = GREAT;
-                        
-//                         forAll(gasFacePoints, gasPointi)
-//                         {
-//                             scalar distance = mag(solidPt - gasFacePoints[gasPointi]);
-//                             if (distance < minDistance)
-//                             {
-//                                 minDistance = distance;
-//                                 bestGasPointi = gasPointi;
-//                             }
-//                         }
-                        
-//                         nMappedPoints++;
-//                         totalDistance += minDistance;
-//                         maxDistance = max(maxDistance, minDistance);
-                        
-//                         // 详细输出前几个面的前几个点的映射情况
-//                         if (facei < 2 && solidPointi < 2)
-//                         {
-//                             Info<< "    面" << facei << "固相点" << solidPointi 
-//                                 << "(全局" << solidGlobalId << "): " << solidPt << " -> ";
-                            
-//                             if (bestGasPointi >= 0)
-//                             {
-//                                 const label gasGlobalId = gasFaceGlobalIds[bestGasPointi];
-//                                 const point& gasPt = gasFacePoints[bestGasPointi];
-//                                 Info<< "气相点" << bestGasPointi 
-//                                     << "(全局" << gasGlobalId << "): " 
-//                                     << gasPt << " 距离=" << minDistance << nl;
-//                             }
-//                             else
-//                             {
-//                                 Info<< "未找到匹配点!" << nl;
-//                             }
-//                         }
-                        
-//                         // 检查距离是否在容差范围内
-//                         if (minDistance <= tolerableDistance && bestGasPointi >= 0)
-//                         {
-//                             const label gasGlobalId = gasFaceGlobalIds[bestGasPointi];
-                            
-//                             // 检查是否已经被其他固相点映射过
-//                             bool alreadyMapped = false;
-//                             forAllConstIter(Map<label>, outputData.solidToGasPointMapping, iter)
-//                             {
-//                                 if (iter() == gasGlobalId)
-//                                 {
-//                                     alreadyMapped = true;
-//                                     break;
-//                                 }
-//                             }
-                            
-//                             if (!alreadyMapped)
-//                             {
-//                                 // 建立映射关系
-//                                 outputData.solidToGasPointMapping.insert(solidGlobalId, gasGlobalId);
-//                                 nValidMappedPoints++;
-//                             }
-//                         }
-//                         else
-//                         {
-//                             nLargeDistancePoints++;
-//                             if (nLargeDistancePoints <= 5)
-//                             {
-//                                 WarningInFunction
-//                                     << "面" << facei << "固相点" << solidGlobalId 
-//                                     << "到最近气相点的距离过大: " 
-//                                     << minDistance << " m" << nl
-//                                     << "固相点坐标: " << solidPt << nl
-//                                     << "容差: " << tolerableDistance << " m" << endl;
-//                             }
-//                         }
-//                     }
-//                 }
-                
-//                 // 输出映射统计信息
-//                 Info<< nl << "基于面对应关系的点映射统计:" << nl;
-//                 Info<< "  检查的固相点数: " << nMappedPoints << nl;
-//                 Info<< "  成功建立映射的点数: " << nValidMappedPoints << nl;
-//                 Info<< "  距离过大的点数: " << nLargeDistancePoints << nl;
-                
-//                 if (nMappedPoints > 0)
-//                 {
-//                     Info<< "  平均映射距离: " << totalDistance/nMappedPoints << " m" << nl;
-//                 }
-//                 Info<< "  最大映射距离: " << maxDistance << " m" << nl;
-//                 Info<< "  容差: " << tolerableDistance << " m" << nl;
-                
-//                 // 检查映射质量
-//                 const scalar mappingRatio = scalar(nValidMappedPoints) / max(nMappedPoints, 1);
-                
-//                 if (nValidMappedPoints == 0)
-//                 {
-//                     WarningInFunction
-//                         << "未能建立任何点映射关系!" << nl
-//                         << "这可能表明两个patch的几何形状不匹配或点顺序完全不同" << nl
-//                         << "将跳过点映射，使用原始点索引" << endl;
-//                 }
-//                 else
-//                 {
-//                     if (maxDistance < 1e-12)
-//                     {
-//                         Info<< "  映射质量: 优秀 (完全重合)" << nl;
-//                     }
-//                     else if (maxDistance < 1e-9)
-//                     {
-//                         Info<< "  映射质量: 很好 (纳米级精度)" << nl;
-//                     }
-//                     else if (maxDistance < 1e-6)
-//                     {
-//                         Info<< "  映射质量: 良好 (微米级精度)" << nl;
-//                     }
-//                     else if (maxDistance < 1e-3)
-//                     {
-//                         Info<< "  映射质量: 可接受 (毫米级精度)" << nl;
-//                     }
-//                     else
-//                     {
-//                         Info<< "  映射质量: 较差 (距离较大)" << nl;
-//                     }
-//                 }
-                
-//                 Info<< "最终建立了 " << outputData.solidToGasPointMapping.size() 
-//                     << " 个有效的耦合界面点映射关系" << nl;
-//                 Info<< "映射成功率: " << (mappingRatio * 100) << "%" << nl;
-//                 Info<< "=========================" << nl << endl;
-//             }
-//             catch (const std::exception& e)
-//             {
-//                 WarningInFunction
-//                     << "无法获取邻域patch信息: " << e.what() << nl
-//                     << "将跳过点映射建立" << endl;
-//             }
-//             catch (...)
-//             {
-//                 WarningInFunction
-//                     << "发生未知异常，将跳过点映射建立" << endl;
-//             }
-//         }
-//         else
-//         {
-//             Info<< nl << "=== 跳过耦合面点映射 ===" << nl;
-//             Info<< "固相patch " << solidToGasPatch.name() 
-//                 << " 不是映射边界，边界类型: " << fvp.type() << nl
-//                 << "将使用原始点索引，不进行点映射转换" << nl
-//                 << "===========================" << nl << endl;
-//         }
-//     }
-//     else
-//     {
-//         WarningInFunction
-//             << "无效的solid_to_gas边界ID: " << couplingPatchID_ << nl
-//             << "边界总数: " << pbm.size() << endl;
-//     }
-// }
-
 void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutput& outputData) const
 {
     const polyBoundaryMesh& pbm = mesh().boundaryMesh();
@@ -395,7 +65,7 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
             
             try
             {
-                Info<< nl << "=== 耦合面点映射分析（基于patch点遍历）===" << nl;
+                Info<< nl << "=== 耦合面点映射分析 ===" << nl;
                 Info<< "固相patch: " << solidToGasPatch.name() 
                     << " (ID: " << couplingPatchID_ << ")" << nl;
 
@@ -435,43 +105,6 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                     return;
                 }
                 
-                // *** 新方法：基于patch点遍历的映射 ***
-                
-                // 1. 获取固相patch的所有点（meshPoints返回patch边界上的点的全局ID）
-                const labelList& solidPatchPoints = solidToGasPatch.meshPoints();
-                const labelList& gasPatchPoints = polyPatchNbr.meshPoints();
-                
-                Info<< "固相patch点数: " << solidPatchPoints.size() << nl;
-                Info<< "气相patch点数: " << gasPatchPoints.size() << nl;
-                
-                if (solidPatchPoints.size() == 0 || gasPatchPoints.size() == 0)
-                {
-                    WarningInFunction
-                        << "patch点列表为空，跳过点映射建立" << endl;
-                    return;
-                }
-                
-                // 2. 提取气相patch点的坐标，用于快速搜索
-                pointField gasPatchPointCoords(gasPatchPoints.size());
-                forAll(gasPatchPoints, i)
-                {
-                    label gasGlobalId = gasPatchPoints[i];
-                    if (gasGlobalId >= 0 && gasGlobalId < gasMeshPoints.size())
-                    {
-                        gasPatchPointCoords[i] = gasMeshPoints[gasGlobalId];
-                    }
-                    else
-                    {
-                        WarningInFunction
-                            << "气相patch点" << i << "的全局ID " << gasGlobalId 
-                            << " 超出范围[0," << gasMeshPoints.size()-1 << "]" << endl;
-                        return;
-                    }
-                }
-                
-                // 3. 创建已映射点的标记数组（用于避免重复映射）
-                PackedBoolList gasPatchPointUsed(gasPatchPoints.size(), false);
-                
                 // 统计变量
                 label nMappedPoints = 0;
                 label nValidMappedPoints = 0;
@@ -479,85 +112,173 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                 scalar maxDistance = 0.0;
                 label nLargeDistancePoints = 0;
                 
-                const scalar tolerableDistance = 1e-3; // 容差：1毫米
+                const scalar tolerableDistance = 1e-3; // 放宽容差到1毫米
                 
-                // Info<< "开始基于patch点遍历的映射..." << nl;
-                // Info<< "容差设置: " << tolerableDistance << " m" << nl;
+                Info<< "开始基于面对应关系的点映射..." << nl;
                 
-                // 4. 遍历固相patch的每个点
-                forAll(solidPatchPoints, solidPointi)
+                // 限制处理的面数量，避免处理过多面时出错
+                const label maxFacesToProcess = solidToGasPatch.size();
+                Info<< "将处理前" << maxFacesToProcess << "个面进行测试..." << nl;
+                
+                // 修正：直接使用face中的全局点ID，不需要通过meshPoints转换
+                for (label facei = 0; facei < maxFacesToProcess; facei++)
                 {
-                    label solidGlobalId = solidPatchPoints[solidPointi];
-                    
-                    // 验证固相点ID有效性
-                    if (solidGlobalId < 0 || solidGlobalId >= solidMeshPoints.size())
+                    // 安全检查：确保面索引在有效范围内
+                    if (facei >= solidToGasPatch.size() || facei >= polyPatchNbr.size())
                     {
                         WarningInFunction
-                            << "固相patch点" << solidPointi << "的全局ID " << solidGlobalId 
-                            << " 超出范围[0," << solidMeshPoints.size()-1 << "]" << endl;
+                            << "面索引" << facei << "超出范围，跳过" << endl;
                         continue;
                     }
                     
-                    const point& solidPt = solidMeshPoints[solidGlobalId];
+                    const face& solidFace = solidToGasPatch[facei];
+                    const face& gasFace = polyPatchNbr[facei];
                     
-                    // 在气相patch的所有未使用点中搜索最近的点
-                    label bestGasPointi = -1;
-                    scalar minDistance = GREAT;
-                    
-                    forAll(gasPatchPointCoords, gasPointi)
+                    // 检查面点数是否匹配
+                    if (solidFace.size() != gasFace.size())
                     {
-                        // 跳过已经被映射的点
-                        if (gasPatchPointUsed[gasPointi])
-                        {
-                            continue;
-                        }
-                        
-                        scalar distance = mag(solidPt - gasPatchPointCoords[gasPointi]);
-                        if (distance < minDistance)
-                        {
-                            minDistance = distance;
-                            bestGasPointi = gasPointi;
-                        }
+                        WarningInFunction
+                            << "面" << facei << "的点数不匹配: "
+                            << "固相=" << solidFace.size() 
+                            << ", 气相=" << gasFace.size() << endl;
+                        continue;
                     }
                     
-                    nMappedPoints++;
-                    
-                    if (bestGasPointi >= 0)
+                    if (solidFace.size() == 0 || gasFace.size() == 0)
                     {
+                        WarningInFunction
+                            << "面" << facei << "为空面，跳过" << endl;
+                        continue;
+                    }
+                    
+                    // 修正：直接使用face中的全局点ID
+                    pointField solidFacePoints(solidFace.size());
+                    labelList solidFaceGlobalIds(solidFace.size());
+                    
+                    bool solidFaceValid = true;
+                    forAll(solidFace, pointi)
+                    {
+                        // 直接使用face中的ID作为全局点ID
+                        label solidGlobalId = solidFace[pointi];
+                        
+                        // 检查全局ID是否在有效范围内
+                        if (solidGlobalId < 0 || solidGlobalId >= solidMeshPoints.size())
+                        {
+                            WarningInFunction
+                                << "面" << facei << "固相全局点ID" << solidGlobalId 
+                                << "超出范围[0," << solidMeshPoints.size()-1 << "]" << endl;
+                            solidFaceValid = false;
+                            break;
+                        }
+                        
+                        solidFacePoints[pointi] = solidMeshPoints[solidGlobalId];
+                        solidFaceGlobalIds[pointi] = solidGlobalId;
+                    }
+                    
+                    if (!solidFaceValid)
+                    {
+                        WarningInFunction
+                            << "面" << facei << "固相点索引无效，跳过" << endl;
+                        continue;
+                    }
+                    
+                    // 修正：直接使用face中的全局点ID
+                    pointField gasFacePoints(gasFace.size());
+                    labelList gasFaceGlobalIds(gasFace.size());
+                    
+                    bool gasFaceValid = true;
+                    forAll(gasFace, pointi)
+                    {
+                        // 直接使用face中的ID作为全局点ID
+                        label gasGlobalId = gasFace[pointi];
+                        
+                        // 检查全局ID是否在有效范围内
+                        if (gasGlobalId < 0 || gasGlobalId >= gasMeshPoints.size())
+                        {
+                            WarningInFunction
+                                << "面" << facei << "气相全局点ID" << gasGlobalId 
+                                << "超出范围[0," << gasMeshPoints.size()-1 << "]" << endl;
+                            gasFaceValid = false;
+                            break;
+                        }
+                        
+                        gasFacePoints[pointi] = gasMeshPoints[gasGlobalId];
+                        gasFaceGlobalIds[pointi] = gasGlobalId;
+                    }
+                    
+                    if (!gasFaceValid)
+                    {
+                        WarningInFunction
+                            << "面" << facei << "气相点索引无效，跳过" << endl;
+                        continue;
+                    }
+                    
+                    // 对固相面上的每个点，在气相面上找到最近的点
+                    forAll(solidFacePoints, solidPointi)
+                    {
+                        const point& solidPt = solidFacePoints[solidPointi];
+                        const label solidGlobalId = solidFaceGlobalIds[solidPointi];
+                        
+                        // 在气相面的点中搜索最近的点
+                        label bestGasPointi = -1;
+                        scalar minDistance = GREAT;
+                        
+                        forAll(gasFacePoints, gasPointi)
+                        {
+                            scalar distance = mag(solidPt - gasFacePoints[gasPointi]);
+                            if (distance < minDistance)
+                            {
+                                minDistance = distance;
+                                bestGasPointi = gasPointi;
+                            }
+                        }
+                        
+                        nMappedPoints++;
                         totalDistance += minDistance;
                         maxDistance = max(maxDistance, minDistance);
                         
-                        // 详细输出前几个点的映射情况
-                        if (solidPointi < 10)
+                        // 详细输出前几个面的前几个点的映射情况
+                        if (facei < 2 && solidPointi < 2)
                         {
-                            label gasGlobalId = gasPatchPoints[bestGasPointi];
-                            const point& gasPt = gasPatchPointCoords[bestGasPointi];
+                            Info<< "    面" << facei << "固相点" << solidPointi 
+                                << "(全局" << solidGlobalId << "): " << solidPt << " -> ";
                             
-                            Info<< "  固相patch点" << solidPointi 
-                                << "(全局" << solidGlobalId << "): " << solidPt << " -> "
-                                << "气相patch点" << bestGasPointi 
-                                << "(全局" << gasGlobalId << "): " 
-                                << gasPt << " 距离=" << minDistance << nl;
+                            if (bestGasPointi >= 0)
+                            {
+                                const label gasGlobalId = gasFaceGlobalIds[bestGasPointi];
+                                const point& gasPt = gasFacePoints[bestGasPointi];
+                                Info<< "气相点" << bestGasPointi 
+                                    << "(全局" << gasGlobalId << "): " 
+                                    << gasPt << " 距离=" << minDistance << nl;
+                            }
+                            else
+                            {
+                                Info<< "未找到匹配点!" << nl;
+                            }
                         }
                         
                         // 检查距离是否在容差范围内
-                        if (minDistance <= tolerableDistance)
+                        if (minDistance <= tolerableDistance && bestGasPointi >= 0)
                         {
-                            label gasGlobalId = gasPatchPoints[bestGasPointi];
+                            const label gasGlobalId = gasFaceGlobalIds[bestGasPointi];
                             
-                            // 建立映射关系
-                            outputData.solidToGasPointMapping.insert(solidGlobalId, gasGlobalId);
-                            nValidMappedPoints++;
+                            // 检查是否已经被其他固相点映射过
+                            bool alreadyMapped = false;
+                            forAllConstIter(Map<label>, outputData.solidToGasPointMapping, iter)
+                            {
+                                if (iter() == gasGlobalId)
+                                {
+                                    alreadyMapped = true;
+                                    break;
+                                }
+                            }
                             
-                            // *** 关键改进：标记此气相点为已使用，避免重复映射 ***
-                            gasPatchPointUsed[bestGasPointi] = true;
-                            
-                            // if (debugLevel_ >= 3)
-                            // {
-                            //     Info<< "    建立映射: 固相" << solidGlobalId 
-                            //         << " -> 气相" << gasGlobalId 
-                            //         << " (距离=" << minDistance << ")" << endl;
-                            // }
+                            if (!alreadyMapped)
+                            {
+                                // 建立映射关系
+                                outputData.solidToGasPointMapping.insert(solidGlobalId, gasGlobalId);
+                                nValidMappedPoints++;
+                            }
                         }
                         else
                         {
@@ -565,7 +286,7 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                             if (nLargeDistancePoints <= 5)
                             {
                                 WarningInFunction
-                                    << "固相patch点" << solidGlobalId 
+                                    << "面" << facei << "固相点" << solidGlobalId 
                                     << "到最近气相点的距离过大: " 
                                     << minDistance << " m" << nl
                                     << "固相点坐标: " << solidPt << nl
@@ -573,36 +294,13 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                             }
                         }
                     }
-                    else
-                    {
-                        if (nLargeDistancePoints <= 5)
-                        {
-                            WarningInFunction
-                                << "固相patch点" << solidGlobalId 
-                                << "未找到可用的气相点进行映射" << endl;
-                        }
-                        nLargeDistancePoints++;
-                    }
                 }
                 
-                // 5. 输出映射统计信息
-                Info<< nl << "基于patch点遍历的映射统计:" << nl;
-                Info<< "  固相patch总点数: " << solidPatchPoints.size() << nl;
-                Info<< "  气相patch总点数: " << gasPatchPoints.size() << nl;
-                Info<< "  处理的固相点数: " << nMappedPoints << nl;
+                // 输出映射统计信息
+                Info<< nl << "基于面对应关系的点映射统计:" << nl;
+                Info<< "  检查的固相点数: " << nMappedPoints << nl;
                 Info<< "  成功建立映射的点数: " << nValidMappedPoints << nl;
-                Info<< "  距离过大或无可用点的点数: " << nLargeDistancePoints << nl;
-                
-                // 统计剩余未使用的气相点
-                label nUnusedGasPoints = 0;
-                forAll(gasPatchPointUsed, i)
-                {
-                    if (!gasPatchPointUsed[i])
-                    {
-                        nUnusedGasPoints++;
-                    }
-                }
-                Info<< "  剩余未使用的气相点数: " << nUnusedGasPoints << nl;
+                Info<< "  距离过大的点数: " << nLargeDistancePoints << nl;
                 
                 if (nMappedPoints > 0)
                 {
@@ -612,18 +310,17 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                 Info<< "  容差: " << tolerableDistance << " m" << nl;
                 
                 // 检查映射质量
-                const scalar mappingRatio = scalar(nValidMappedPoints) / max(solidPatchPoints.size(), 1);
+                const scalar mappingRatio = scalar(nValidMappedPoints) / max(nMappedPoints, 1);
                 
                 if (nValidMappedPoints == 0)
                 {
                     WarningInFunction
                         << "未能建立任何点映射关系!" << nl
-                        << "这可能表明两个patch的几何形状不匹配或距离过大" << nl
+                        << "这可能表明两个patch的几何形状不匹配或点顺序完全不同" << nl
                         << "将跳过点映射，使用原始点索引" << endl;
                 }
                 else
                 {
-                    // 映射质量评估
                     if (maxDistance < 1e-12)
                     {
                         Info<< "  映射质量: 优秀 (完全重合)" << nl;
@@ -643,24 +340,6 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
                     else
                     {
                         Info<< "  映射质量: 较差 (距离较大)" << nl;
-                    }
-                    
-                    // 检查映射的完整性
-                    if (mappingRatio > 0.9)
-                    {
-                        Info<< "  映射完整性: 优秀 (>90%)" << nl;
-                    }
-                    else if (mappingRatio > 0.7)
-                    {
-                        Info<< "  映射完整性: 良好 (>70%)" << nl;
-                    }
-                    else if (mappingRatio > 0.5)
-                    {
-                        Info<< "  映射完整性: 一般 (>50%)" << nl;
-                    }
-                    else
-                    {
-                        Info<< "  映射完整性: 较差 (<50%)" << nl;
                     }
                 }
                 
@@ -697,6 +376,287 @@ void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutp
             << "边界总数: " << pbm.size() << endl;
     }
 }
+
+// void Foam::fvMeshTopoChangers::melter::buildCouplingPointMapping(MeltingDataOutput& outputData) const
+// {
+//     const polyBoundaryMesh& pbm = mesh().boundaryMesh();
+//     if (couplingPatchID_ >= 0 && couplingPatchID_ < pbm.size())
+//     {
+//         const polyPatch& solidToGasPatch = pbm[couplingPatchID_];     
+//         // 检查是否为映射边界
+//         const fvPatch& fvp = mesh().boundary()[couplingPatchID_];   
+//         if (isA<mappedFvPatchBaseBase>(fvp))
+//         {
+//             const mappedFvPatchBaseBase& mapper = 
+//                 refCast<const mappedFvPatchBaseBase>(fvp);          
+//             try
+//             {
+//                 Info<< nl << "=== 耦合面点映射分析（基于patch点遍历）===" << nl;
+//                 Info<< "固相patch: " << solidToGasPatch.name() 
+//                     << " (ID: " << couplingPatchID_ << ")" << nl;
+//                 // 获取邻域patch
+//                 const fvPatch& patchNbr = mapper.nbrFvPatch();
+//                 const polyPatch& polyPatchNbr = patchNbr.patch();                
+//                 Info<< "气相patch: " << polyPatchNbr.name() << nl;
+//                 Info<< "固相面数: " << solidToGasPatch.size() << nl;
+//                 Info<< "气相面数: " << polyPatchNbr.size() << nl;                
+//                 // 检查面数量是否匹配
+//                 if (solidToGasPatch.size() != polyPatchNbr.size())
+//                 {
+//                     WarningInFunction
+//                         << "固相和气相patch的面数量不匹配: "
+//                         << "固相面数 = " << solidToGasPatch.size()
+//                         << ", 气相面数 = " << polyPatchNbr.size() << nl
+//                         << "跳过点映射建立" << endl;
+//                     return;
+//                 }                
+//                 if (solidToGasPatch.size() == 0)
+//                 {
+//                     Info<< "patch为空，跳过点映射建立" << endl;
+//                     return;
+//                 }               
+//                 // 获取网格点坐标
+//                 const pointField& solidMeshPoints = mesh().points();
+//                 const pointField& gasMeshPoints = patchNbr.boundaryMesh().mesh().points();                
+//                 if (solidMeshPoints.size() == 0 || gasMeshPoints.size() == 0)
+//                 {
+//                     WarningInFunction
+//                         << "网格点坐标数组为空，跳过点映射建立" << endl;
+//                     return;
+//                 }             
+//                 // *** 新方法：基于patch点遍历的映射 ***                
+//                 // 1. 获取固相patch的所有点（meshPoints返回patch边界上的点的全局ID）
+//                 const labelList& solidPatchPoints = solidToGasPatch.meshPoints();
+//                 const labelList& gasPatchPoints = polyPatchNbr.meshPoints();               
+//                 Info<< "固相patch点数: " << solidPatchPoints.size() << nl;
+//                 Info<< "气相patch点数: " << gasPatchPoints.size() << nl;               
+//                 if (solidPatchPoints.size() == 0 || gasPatchPoints.size() == 0)
+//                 {
+//                     WarningInFunction
+//                         << "patch点列表为空，跳过点映射建立" << endl;
+//                     return;
+//                 }              
+//                 // 2. 提取气相patch点的坐标，用于快速搜索
+//                 pointField gasPatchPointCoords(gasPatchPoints.size());
+//                 forAll(gasPatchPoints, i)
+//                 {
+//                     label gasGlobalId = gasPatchPoints[i];
+//                     if (gasGlobalId >= 0 && gasGlobalId < gasMeshPoints.size())
+//                     {
+//                         gasPatchPointCoords[i] = gasMeshPoints[gasGlobalId];
+//                     }
+//                     else
+//                     {
+//                         WarningInFunction
+//                             << "气相patch点" << i << "的全局ID " << gasGlobalId 
+//                             << " 超出范围[0," << gasMeshPoints.size()-1 << "]" << endl;
+//                         return;
+//                     }
+//                 }               
+//                 // 3. 创建已映射点的标记数组（用于避免重复映射）
+//                 PackedBoolList gasPatchPointUsed(gasPatchPoints.size(), false);             
+//                 // 统计变量
+//                 label nMappedPoints = 0;
+//                 label nValidMappedPoints = 0;
+//                 scalar totalDistance = 0.0;
+//                 scalar maxDistance = 0.0;
+//                 label nLargeDistancePoints = 0;             
+//                 const scalar tolerableDistance = 1e-3; // 容差：1毫米             
+//                 // Info<< "开始基于patch点遍历的映射..." << nl;
+//                 // Info<< "容差设置: " << tolerableDistance << " m" << nl;             
+//                 // 4. 遍历固相patch的每个点
+//                 forAll(solidPatchPoints, solidPointi)
+//                 {
+//                     label solidGlobalId = solidPatchPoints[solidPointi];                   
+//                     // 验证固相点ID有效性
+//                     if (solidGlobalId < 0 || solidGlobalId >= solidMeshPoints.size())
+//                     {
+//                         WarningInFunction
+//                             << "固相patch点" << solidPointi << "的全局ID " << solidGlobalId 
+//                             << " 超出范围[0," << solidMeshPoints.size()-1 << "]" << endl;
+//                         continue;
+//                     }                 
+//                     const point& solidPt = solidMeshPoints[solidGlobalId];                 
+//                     // 在气相patch的所有未使用点中搜索最近的点
+//                     label bestGasPointi = -1;
+//                     scalar minDistance = GREAT;                  
+//                     forAll(gasPatchPointCoords, gasPointi)
+//                     {
+//                         // 跳过已经被映射的点
+//                         if (gasPatchPointUsed[gasPointi])
+//                         {
+//                             continue;
+//                         }                   
+//                         scalar distance = mag(solidPt - gasPatchPointCoords[gasPointi]);
+//                         if (distance < minDistance)
+//                         {
+//                             minDistance = distance;
+//                             bestGasPointi = gasPointi;
+//                         }
+//                     }                  
+//                     nMappedPoints++;                 
+//                     if (bestGasPointi >= 0)
+//                     {
+//                         totalDistance += minDistance;
+//                        maxDistance = max(maxDistance, minDistance);                     
+//                         // 详细输出前几个点的映射情况
+//                         if (solidPointi < 10)
+//                         {
+//                             label gasGlobalId = gasPatchPoints[bestGasPointi];
+//                             const point& gasPt = gasPatchPointCoords[bestGasPointi];                           
+//                             Info<< "  固相patch点" << solidPointi 
+//                                 << "(全局" << solidGlobalId << "): " << solidPt << " -> "
+//                                 << "气相patch点" << bestGasPointi 
+//                                 << "(全局" << gasGlobalId << "): " 
+//                                 << gasPt << " 距离=" << minDistance << nl;
+//                         }                       
+//                         // 检查距离是否在容差范围内
+//                         if (minDistance <= tolerableDistance)
+//                         {
+//                             label gasGlobalId = gasPatchPoints[bestGasPointi];                            
+//                             // 建立映射关系
+//                             outputData.solidToGasPointMapping.insert(solidGlobalId, gasGlobalId);
+//                             nValidMappedPoints++;                           
+//                             // *** 关键改进：标记此气相点为已使用，避免重复映射 ***
+//                             gasPatchPointUsed[bestGasPointi] = true;                           
+//                             // if (debugLevel_ >= 3)
+//                             // {
+//                             //     Info<< "    建立映射: 固相" << solidGlobalId 
+//                             //         << " -> 气相" << gasGlobalId 
+//                             //         << " (距离=" << minDistance << ")" << endl;
+//                             // }
+//                         }
+//                         else
+//                         {
+//                             nLargeDistancePoints++;
+//                             if (nLargeDistancePoints <= 5)
+//                             {
+//                                 WarningInFunction
+//                                     << "固相patch点" << solidGlobalId 
+//                                     << "到最近气相点的距离过大: " 
+//                                     << minDistance << " m" << nl
+//                                     << "固相点坐标: " << solidPt << nl
+//                                     << "容差: " << tolerableDistance << " m" << endl;
+//                             }
+//                         }
+//                     }
+//                     else
+//                     {
+//                         if (nLargeDistancePoints <= 5)
+//                         {
+//                             WarningInFunction
+//                                 << "固相patch点" << solidGlobalId 
+//                                 << "未找到可用的气相点进行映射" << endl;
+//                         }
+//                         nLargeDistancePoints++;
+//                     }
+//                 }               
+//                 // 5. 输出映射统计信息
+//                 Info<< nl << "基于patch点遍历的映射统计:" << nl;
+//                 Info<< "  固相patch总点数: " << solidPatchPoints.size() << nl;
+//                 Info<< "  气相patch总点数: " << gasPatchPoints.size() << nl;
+//                 Info<< "  处理的固相点数: " << nMappedPoints << nl;
+//                 Info<< "  成功建立映射的点数: " << nValidMappedPoints << nl;
+//                 Info<< "  距离过大或无可用点的点数: " << nLargeDistancePoints << nl;               
+//                 // 统计剩余未使用的气相点
+//                 label nUnusedGasPoints = 0;
+//                 forAll(gasPatchPointUsed, i)
+//                 {
+//                     if (!gasPatchPointUsed[i])
+//                     {
+//                         nUnusedGasPoints++;
+//                     }
+//                 }
+//                 Info<< "  剩余未使用的气相点数: " << nUnusedGasPoints << nl;              
+//                 if (nMappedPoints > 0)
+//                 {
+//                     Info<< "  平均映射距离: " << totalDistance/nMappedPoints << " m" << nl;
+//                 }
+//                 Info<< "  最大映射距离: " << maxDistance << " m" << nl;
+//                 Info<< "  容差: " << tolerableDistance << " m" << nl;                
+//                 // 检查映射质量
+//                 const scalar mappingRatio = scalar(nValidMappedPoints) / max(solidPatchPoints.size(), 1);                
+//                 if (nValidMappedPoints == 0)
+//                 {
+//                     WarningInFunction
+//                         << "未能建立任何点映射关系!" << nl
+//                         << "这可能表明两个patch的几何形状不匹配或距离过大" << nl
+//                         << "将跳过点映射，使用原始点索引" << endl;
+//                 }
+//                 else
+//                 {
+//                     // 映射质量评估
+//                     if (maxDistance < 1e-12)
+//                     {
+//                         Info<< "  映射质量: 优秀 (完全重合)" << nl;
+//                     }
+//                     else if (maxDistance < 1e-9)
+//                     {
+//                         Info<< "  映射质量: 很好 (纳米级精度)" << nl;
+//                     }
+//                     else if (maxDistance < 1e-6)
+//                     {
+//                         Info<< "  映射质量: 良好 (微米级精度)" << nl;
+//                     }
+//                     else if (maxDistance < 1e-3)
+//                     {
+//                         Info<< "  映射质量: 可接受 (毫米级精度)" << nl;
+//                     }
+//                     else
+//                     {
+//                         Info<< "  映射质量: 较差 (距离较大)" << nl;
+//                     }                    
+//                     // 检查映射的完整性
+//                     if (mappingRatio > 0.9)
+//                     {
+//                         Info<< "  映射完整性: 优秀 (>90%)" << nl;
+//                     }
+//                     else if (mappingRatio > 0.7)
+//                     {
+//                         Info<< "  映射完整性: 良好 (>70%)" << nl;
+//                     }
+//                     else if (mappingRatio > 0.5)
+//                     {
+//                         Info<< "  映射完整性: 一般 (>50%)" << nl;
+//                     }
+//                     else
+//                     {
+//                         Info<< "  映射完整性: 较差 (<50%)" << nl;
+//                     }
+//                 }                
+//                 Info<< "最终建立了 " << outputData.solidToGasPointMapping.size() 
+//                     << " 个有效的耦合界面点映射关系" << nl;
+//                 Info<< "映射成功率: " << (mappingRatio * 100) << "%" << nl;
+//                 Info<< "=========================" << nl << endl;
+//             }
+//             catch (const std::exception& e)
+//             {
+//                 WarningInFunction
+//                     << "无法获取邻域patch信息: " << e.what() << nl
+//                     << "将跳过点映射建立" << endl;
+//             }
+//             catch (...)
+//             {
+//                 WarningInFunction
+//                     << "发生未知异常，将跳过点映射建立" << endl;
+//             }
+//         }
+//         else
+//         {
+//             Info<< nl << "=== 跳过耦合面点映射 ===" << nl;
+//             Info<< "固相patch " << solidToGasPatch.name() 
+//                 << " 不是映射边界，边界类型: " << fvp.type() << nl
+//                 << "将使用原始点索引，不进行点映射转换" << nl
+//                 << "===========================" << nl << endl;
+//         }
+//     }
+//     else
+//     {
+//         WarningInFunction
+//             << "无效的solid_to_gas边界ID: " << couplingPatchID_ << nl
+//             << "边界总数: " << pbm.size() << endl;
+//     }
+// }
 
 void Foam::fvMeshTopoChangers::MeltingDataOutput::applyCouplingPointMapping()
 {
