@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+topoChanger
+{
+    type    cellRemoval;
+
+    libs ("libcellRemovalAddition.so");
+
+        // 融化温度阈值，超过此值的固相单元将被移除
+    Threshold            302;
+    
+    // 每隔多少时间步执行一次拓扑变化
+    changeInterval         1;
+
+    debugLevel             0; // 调试级别
+    
+    // solid_to_gas边界名称 (固相侧的边界名称)
+    couplingPatch    solid_to_gas;
+    
+    // 温度场名称
+    fieldName   T;
+}
+
+// ************************************************************************* //
